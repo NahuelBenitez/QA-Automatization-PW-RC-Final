@@ -1,46 +1,30 @@
 import { test, expect } from '@playwright/test';
 
-const API = 'https://api.demoblaze.com';
+const API = process.env.API_URL;
 
 test.describe('TC01 - Signup duplicado UI', () => {
 
   test('UI: intentar registrar usuario ya existente muestra alerta', async ({ request, page }) => {
-
-    // Creamos un username unico para esta corrida
     const username = `tc01_ui_${Date.now()}`;
     const password = 'bootcamp123';
 
-    
-//PASO 1 — Creamos el usuario por API (rápido y confiable)
-
+    // Setup por API (confiable)
     await request.post(`${API}/signup`, {
       data: { username, password }
     });
 
-    
-//PASO 2 — Navegamos a DemoBlaze e intentamos registrar el mismo usuario por UI
-
     await page.goto('/');
 
-    // Abrimos el modal de signup
-    await page.click('#signin2');
-    await expect(page.locator('#signInModal')).toBeVisible();
+    // Locators de Codegen (más robustos)
+    await page.getByRole('link', { name: 'Sign up' }).click();
+    await page.getByRole('textbox', { name: 'Username:' }).fill(username);
+    await page.getByRole('textbox', { name: 'Password:' }).fill(password);
 
-    // Completamos el formulario con el usuario ya existente
-    await page.fill('#sign-username', username);
-    await page.fill('#sign-password', password);
-
-    
-//PASO 3 — Capturamos el dialog (alert) ANTES de clickear el botón
-
+    // Manejo del dialog con verificación real
     const dialogPromise = page.waitForEvent('dialog');
-    await page.click('#signInModal .btn-primary');
+    await page.getByRole('button', { name: 'Sign up' }).click();
     const dialog = await dialogPromise;
 
-    
-//PASO 4 — Verificamos el mensaje del alert y lo cerramos
-
-    console.log('Mensaje del alert:', dialog.message());
     expect(dialog.message()).toContain('This user already exist.');
     await dialog.accept();
   });
